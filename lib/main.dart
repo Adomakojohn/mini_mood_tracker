@@ -28,7 +28,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   final Box<MoodEntry> moodBox;
 
-  const MyApp({Key? key, required this.moodBox}) : super(key: key);
+  const MyApp({super.key, required this.moodBox});
 
   @override
   Widget build(BuildContext context) {
