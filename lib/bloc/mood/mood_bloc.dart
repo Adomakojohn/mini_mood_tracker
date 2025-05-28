@@ -18,7 +18,7 @@ class MoodBloc extends Bloc<MoodEvent, MoodState> {
       emit(MoodLoading());
       final moods = moodBox.values.toList();
       moods.sort(
-        (a, b) => b.date.compareTo(a.date),
+        (a, b) => b.safeDate.compareTo(a.safeDate),
       ); // Sort by date, newest first
       emit(MoodLoaded(moods: moods));
     } catch (e) {
@@ -30,7 +30,7 @@ class MoodBloc extends Bloc<MoodEvent, MoodState> {
     try {
       await moodBox.add(event.moodEntry);
       final moods = moodBox.values.toList();
-      moods.sort((a, b) => b.date.compareTo(a.date));
+      moods.sort((a, b) => b.safeDate.compareTo(a.safeDate));
       emit(MoodLoaded(moods: moods));
     } catch (e) {
       emit(MoodError(message: 'Failed to add mood: $e'));
@@ -42,7 +42,7 @@ class MoodBloc extends Bloc<MoodEvent, MoodState> {
       final index = moodBox.values.toList().indexOf(event.moodEntry);
       await moodBox.deleteAt(index);
       final moods = moodBox.values.toList();
-      moods.sort((a, b) => b.date.compareTo(a.date));
+      moods.sort((a, b) => b.safeDate.compareTo(a.safeDate));
       emit(MoodLoaded(moods: moods));
     } catch (e) {
       emit(MoodError(message: 'Failed to delete mood: $e'));

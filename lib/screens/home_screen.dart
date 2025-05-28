@@ -1,61 +1,118 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/auth_bloc/auth_bloc.dart';
 import '../bloc/mood/mood_bloc.dart';
 import '../bloc/mood/mood_event.dart';
 import '../bloc/mood/mood_state.dart';
-import '../bloc/theme/theme_bloc.dart';
-import '../bloc/theme/theme_event.dart';
 import '../models/mood_entry.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  final String userId;
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  const HomeScreen({super.key, required this.userId});
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  bool _isHistoryVisible = false;
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  final List<Map<String, dynamic>> moodOptions = [
-    {'emoji': '😊', 'label': 'Happy'},
-    {'emoji': '😢', 'label': 'Sad'},
-    {'emoji': '😴', 'label': 'Tired'},
-    {'emoji': '😡', 'label': 'Angry'},
-    {'emoji': '😌', 'label': 'Calm'},
-    {'emoji': '😍', 'label': 'Love'},
-    {'emoji': '😰', 'label': 'Anxious'},
-    {'emoji': '🤔', 'label': 'Thoughtful'},
+  // Define mood options with emojis and labels
+  static const List<Map<String, String>> moodOptions = [
+    {'emoji': '😄', 'label': 'Very Happy', 'mood': 'Very Happy'},
+    {'emoji': '😊', 'label': 'Happy', 'mood': 'Happy'},
+    {'emoji': '😐', 'label': 'Neutral', 'mood': 'Neutral'},
+    {'emoji': '😔', 'label': 'Sad', 'mood': 'Sad'},
+    {'emoji': '😢', 'label': 'Very Sad', 'mood': 'Very Sad'},
+    {'emoji': '😴', 'label': 'Tired', 'mood': 'Tired'},
+    {'emoji': '😤', 'label': 'Angry', 'mood': 'Angry'},
+    {'emoji': '😰', 'label': 'Anxious', 'mood': 'Anxious'},
+    {'emoji': '🤗', 'label': 'Grateful', 'mood': 'Grateful'},
+    {'emoji': '💪', 'label': 'Motivated', 'mood': 'Motivated'},
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+  // Function to show mood selection dialog
+  void _showMoodSelectionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'How are you feeling?',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: GridView.builder(
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, // 2 moods per row
+                childAspectRatio: 2.5, // Make items wider than tall
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: moodOptions.length,
+              itemBuilder: (context, index) {
+                final moodOption = moodOptions[index];
+                return InkWell(
+                  onTap: () {
+                    _addMood(context, moodOption['mood']!);
+                    Navigator.of(context).pop(); // Close dialog
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey.shade50,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          moodOption['emoji']!,
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          moodOption['label']!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  // Function to add a mood entry
+  void _addMood(BuildContext context, String mood) {
+    final moodEntry = MoodEntry.create(
+      mood: mood,
+      date: DateTime.now(),
+      userId: userId,
+    );
 
-  void _toggleHistory() {
-    setState(() {
-      _isHistoryVisible = !_isHistoryVisible;
-      if (_isHistoryVisible) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
-    });
+    // Add the mood using the MoodBloc
+    context.read<MoodBloc>().add(AddMood(moodEntry));
+
+    // Show a confirmation snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added mood: $mood'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override
@@ -65,251 +122,93 @@ class _HomeScreenState extends State<HomeScreen>
         title: const Text('Mood Tracker'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.brightness_6),
+            icon: const Icon(Icons.logout),
             onPressed: () {
-              context.read<ThemeBloc>().add(ToggleTheme());
+              context.read<AuthBloc>().add(SignOutRequested());
             },
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Main Content
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 24.0,
-                    horizontal: 16.0,
+      body: BlocBuilder<MoodBloc, MoodState>(
+        builder: (context, state) {
+          if (state is MoodLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is MoodLoaded) {
+            // Filter moods for current user using safe getter
+            final userMoods =
+                state.moods.where((mood) => mood.safeUserId == userId).toList();
+
+            if (userMoods.isEmpty) {
+              return const Center(
+                child: Text('No moods recorded yet. Add your first mood!'),
+              );
+            }
+
+            return ListView.builder(
+              itemCount: userMoods.length,
+              itemBuilder: (context, index) {
+                final mood = userMoods[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
                   ),
-                  child: Text(
-                    'How are you feeling?',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 16,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: 1.5,
-                        ),
-                    itemCount: moodOptions.length,
-                    itemBuilder: (context, index) {
-                      final mood = moodOptions[index];
-                      return Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            context.read<MoodBloc>().add(
-                              AddMood(
-                                MoodEntry(
-                                  mood: '${mood['emoji']} ${mood['label']}',
-                                  date: DateTime.now(),
-                                ),
-                              ),
-                            );
-                            if (!_isHistoryVisible) {
-                              _toggleHistory();
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary.withOpacity(0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  mood['emoji'],
-                                  style: const TextStyle(fontSize: 48),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  mood['label'],
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                // Add padding at the bottom to ensure content isn't hidden behind the history panel
-                SizedBox(
-                  height:
-                      _isHistoryVisible
-                          ? MediaQuery.of(context).size.height * 0.6
-                          : 20,
-                ),
-              ],
-            ),
-          ),
-          // Dismiss detector for the history panel
-          if (_isHistoryVisible)
-            GestureDetector(
-              onTap: _toggleHistory,
-              child: Container(color: Colors.black.withOpacity(0.1)),
-            ),
-          // History Panel
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            left: 0,
-            right: 0,
-            bottom:
-                _isHistoryVisible
-                    ? 0
-                    : -(MediaQuery.of(context).size.height * 0.6),
-            child: GestureDetector(
-              onTap: () {}, // Prevent taps from reaching the background
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.6,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    topRight: Radius.circular(32),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: _toggleHistory,
-                      child: Container(
-                        width: 60,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400],
-                          borderRadius: BorderRadius.circular(5),
-                        ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      child: Text(
+                        _getMoodEmoji(mood.safeMood),
+                        style: const TextStyle(fontSize: 20),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Mood History',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down,
-                              size: 32,
-                            ),
-                            onPressed: _toggleHistory,
-                          ),
-                        ],
-                      ),
+                    title: Text(
+                      mood.safeMood,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
-                    Expanded(
-                      child: BlocBuilder<MoodBloc, MoodState>(
-                        builder: (context, state) {
-                          if (state is MoodLoading) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          if (state is MoodLoaded) {
-                            return ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: state.moods.length,
-                              itemBuilder: (context, index) {
-                                final mood = state.moods[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 2,
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(16),
-                                    title: Text(
-                                      mood.mood,
-                                      style: const TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 8.0),
-                                      child: Text(
-                                        '${mood.date.day}/${mood.date.month}/${mood.date.year} ${mood.date.hour}:${mood.date.minute}',
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete, size: 28),
-                                      onPressed: () {
-                                        context.read<MoodBloc>().add(
-                                          DeleteMood(mood),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                          if (state is MoodError) {
-                            return Center(child: Text(state.message));
-                          }
-                          return const Center(
-                            child: Text(
-                              'Select your mood',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                          );
-                        },
-                      ),
+                    subtitle: Text(
+                      '${mood.safeDate.day}/${mood.safeDate.month}/${mood.safeDate.year} at ${mood.safeDate.hour.toString().padLeft(2, '0')}:${mood.safeDate.minute.toString().padLeft(2, '0')}',
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        // Add delete functionality
+                        context.read<MoodBloc>().add(DeleteMood(mood));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Mood deleted'),
+                            duration: Duration(seconds: 2),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          }
+
+          return const Center(child: Text('Something went wrong'));
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showMoodSelectionDialog(context);
+        },
+        child: const Icon(Icons.add),
       ),
     );
+  }
+
+  // Helper function to get emoji for a mood
+  String _getMoodEmoji(String mood) {
+    for (final option in moodOptions) {
+      if (option['mood'] == mood) {
+        return option['emoji']!;
+      }
+    }
+    return '😐'; // Default emoji if mood not found
   }
 }

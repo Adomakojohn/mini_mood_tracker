@@ -17,19 +17,22 @@ class MoodEntryAdapter extends TypeAdapter<MoodEntry> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return MoodEntry(
-      mood: fields[0] as String,
-      date: fields[1] as DateTime,
+      mood: fields[0] as String?,
+      date: fields[1] as DateTime?,
+      userId: fields[2] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MoodEntry obj) {
     writer
-      ..writeByte(2)
+      ..writeByte(3)
       ..writeByte(0)
       ..write(obj.mood)
       ..writeByte(1)
-      ..write(obj.date);
+      ..write(obj.date)
+      ..writeByte(2)
+      ..write(obj.userId);
   }
 
   @override
