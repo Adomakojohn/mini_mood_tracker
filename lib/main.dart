@@ -17,21 +17,17 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Load environment variables from .env file
     await dotenv.load(fileName: ".env");
 
-    // Get Supabase credentials from environment variables
     final supabaseUrl = dotenv.env['SUPABASE_URL'];
     final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
 
-    // Validate that environment variables are loaded
     if (supabaseUrl == null || supabaseAnonKey == null) {
       throw Exception(
         'Missing Supabase configuration. Please check your .env file contains SUPABASE_URL and SUPABASE_ANON_KEY',
       );
     }
 
-    // Initialize Supabase with environment variables
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
@@ -46,7 +42,6 @@ void main() async {
     // Register Hive Adapter
     Hive.registerAdapter(MoodEntryAdapter());
 
-    // Clear existing data to prevent null casting errors (temporary fix)
     try {
       await Hive.deleteBoxFromDisk('moods');
     } catch (e) {
@@ -59,12 +54,10 @@ void main() async {
     // Create Supabase client
     final supabase = Supabase.instance.client;
 
-    // Create repository
     final authRepository = AuthRepository(supabase: supabase);
 
     runApp(MyApp(moodBox: moodBox, authRepository: authRepository));
   } catch (e) {
-    // Show error screen if initialization fails
     runApp(
       MaterialApp(
         home: Scaffold(
