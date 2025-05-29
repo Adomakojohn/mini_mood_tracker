@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'models/mood_entry.dart';
 import 'bloc/theme/theme_bloc.dart';
 import 'bloc/theme/theme_state.dart';
@@ -16,11 +17,24 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Supabase
+    // Load environment variables from .env file
+    await dotenv.load(fileName: ".env");
+
+    // Get Supabase credentials from environment variables
+    final supabaseUrl = dotenv.env['SUPABASE_URL'];
+    final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+    // Validate that environment variables are loaded
+    if (supabaseUrl == null || supabaseAnonKey == null) {
+      throw Exception(
+        'Missing Supabase configuration. Please check your .env file contains SUPABASE_URL and SUPABASE_ANON_KEY',
+      );
+    }
+
+    // Initialize Supabase with environment variables
     await Supabase.initialize(
-      url: 'https://fuaymexwqceqjabzlxke.supabase.co',
-      anonKey:
-          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1YXltZXh3cWNlcWphYnpseGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NDA4OTQsImV4cCI6MjA2MzQxNjg5NH0.xoK55gwQn8ybeG8rVNkOyhBYgCjdUgmNrDou_KX2oDY',
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
     ).timeout(
       const Duration(seconds: 10),
       onTimeout: () => throw Exception('Failed to initialize Supabase'),
