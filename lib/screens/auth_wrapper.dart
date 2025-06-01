@@ -18,7 +18,6 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Show error message if there's an error
         if (state is AuthError) {
           return Scaffold(
             body: Center(
@@ -32,7 +31,6 @@ class AuthWrapper extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      // Try to check auth status again
                       context.read<AuthBloc>().add(AuthCheckRequested());
                     },
                     child: const Text('Retry'),
@@ -43,17 +41,14 @@ class AuthWrapper extends StatelessWidget {
           );
         }
 
-        // Show login screen if user is not authenticated
         if (state is AuthUnauthenticated) {
           return const LoginScreen();
         }
 
-        // Show home screen if user is authenticated
         if (state is AuthAuthenticated) {
           return HomeScreen(userId: state.userId);
         }
 
-        // Default to login screen
         return const LoginScreen();
       },
     );

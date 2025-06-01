@@ -17,12 +17,10 @@ class UserModel {
       throw Exception('User object is null');
     }
 
-    // Ensure we have required fields
     if (user.id == null) {
       throw Exception('User ID is null');
     }
 
-    // Parse createdAt safely
     DateTime createdAt;
     try {
       createdAt = DateTime.parse(
@@ -33,11 +31,9 @@ class UserModel {
     }
 
     return UserModel(
-      id: user.id.toString(), // Convert to string to ensure type safety
-      email: user.email?.toString() ?? '', // Handle null email
-      name:
-          displayName ??
-          user.userMetadata?['name']?.toString(), // Handle null name
+      id: user.id.toString(),
+      email: user.email?.toString() ?? '',
+      name: displayName ?? user.userMetadata?['name']?.toString(),
       createdAt: createdAt,
     );
   }
